@@ -8,7 +8,12 @@
 </head>
 <body>
     <div class="container-fluid mt-4">
-        <h1>Relatório de Avarias</h1>
+        <h1>CCB Siga - Relatório de Avarias
+            <div id="loadingSpinner" class="spinner-border text-primary d-none" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+
+        </h1>
         <div class="mb-3">
             <label for="token" class="form-label">Bearer Token:</label>
             <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token"/>       
@@ -19,6 +24,8 @@
             <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
             <input type="text" id="campoBusca" class="form-control mt-2" placeholder="Buscar..." onkeyup="filtrarTabela()">
         </div>
+
+        
 
         
         <table id="tabela-relatorio" class="table table-bordered table-hover table-striped">
@@ -72,8 +79,8 @@
             "filtro": {
                 "codigoTipoChecklist": null,
                 "codigoEstabelecimento": null,
-                "dataIni": "2024-07-01",
-                "dataFim": "2024-07-31",
+                "dataIni": null,
+                "dataFim": null,
                 "status": [
                     { "codigo": 0, "nomeExibicao": "Pendente" },
                     { "codigo": 3, "nomeExibicao": "Em andamento" },
@@ -90,27 +97,7 @@
             }
         };
 
-        async function listadeAvarias(token) {
-            try {
-                let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
-                    },
-                    body: JSON.stringify(filtroJson)
-                });
-                if (!response.ok) {
-                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-                }
-                let data = await response.json();
-                return data.dados;
-            } catch (error) {
-                console.error('Erro ao buscar dados de avarias:', error);
-                alert('Erro ao buscar dados de avarias: ' + error.message);
-                return null;
-            }
-        }
+        
 
         async function detalhesAvaria(codigoAvaria, token) {
             try {
@@ -152,48 +139,109 @@
             }
         }
 
-        async function gerarRelatorio() {
-            let token = document.getElementById('token').value;
-            if (!token) {
-                alert('Por favor, insira o Bearer Token.');
-                return;
+        async function listadeAvarias(token, paginaAtual = 0, quantidadePorPagina = 100) {
+    try {
+        let filtroJsonPaginado = {
+            ...filtroJson,
+            paginacao: {
+                paginaAtual: paginaAtual,
+                quantidadePorPagina: quantidadePorPagina.toString(),
+                ordenarPor: null,
+                ordenarDirecao: null
             }
+        };
 
-            let avarias = await listadeAvarias(token);
-            if (!avarias) {
-                return;
-            }
+        let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(filtroJsonPaginado)
+        });
 
-            let tabelaBody = document.querySelector('#tabela-relatorio tbody');
-            tabelaBody.innerHTML = ''; // Limpar tabela antes de preenchê-la
-
-            for (let avaria of avarias) {
-                let detalhes = await detalhesAvaria(avaria.codigo, token);
-                let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
-                let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
-                let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
-
-                let row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${avaria.id}</td>
-                    <td>${avaria.nomeCasaOracao}</td>
-                    <td>${avaria.nome}</td>
-                    <td>${detalhesDescricao}</td>
-                    <td>${avaria.apoioAdministracao}</td>
-                    <td>${avaria.ofereceRisco}</td>
-                    <td>${avaria.necessarioAtividadeAltura}</td>
-                    <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                    <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
-                    <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
-                    <td>${avaria.status}</td>
-                    <td>${avaria.nomeChecklist}</td>
-                    <td>${avaria.nomeChecklistItem}</td>
-                    <td>${qtdAnexos}</td>
-                    <td><button class="btn btn-secondary" onclick="mostrarRespostas('${avaria.codigo}')">Ver Respostas</button></td>
-                `;
-                tabelaBody.appendChild(row);
-            }
+        if (!response.ok) {
+            throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
         }
+
+        let data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Erro ao buscar dados de avarias:', error);
+        alert('Erro ao buscar dados de avarias: ' + error.message);
+        return null;
+    }
+}
+
+async function carregarTodosRegistros(token) {
+    let todosOsRegistros = [];
+    let paginaAtual = 0;
+    let quantidadePorPagina = 100;
+    let totalLinhas = 0;
+
+    do {
+        let data = await listadeAvarias(token, paginaAtual, quantidadePorPagina);
+        if (data && data.dados) {
+            todosOsRegistros = todosOsRegistros.concat(data.dados);
+            totalLinhas = data.totalLinhas;
+            paginaAtual++;
+        } else {
+            break;
+        }
+    } while (todosOsRegistros.length < totalLinhas);
+
+    return todosOsRegistros;
+}
+
+async function gerarRelatorio() {
+    let token = document.getElementById('token').value;
+    if (!token) {
+        alert('Por favor, insira o Bearer Token.');
+        return;
+    }
+
+    document.getElementById('loadingSpinner').classList.remove('d-none');
+
+    let avarias = await carregarTodosRegistros(token);
+    if (!avarias || avarias.length === 0) {
+        document.getElementById('loadingSpinner').classList.add('d-none');
+        return;
+    }
+
+    let tabelaBody = document.querySelector('#tabela-relatorio tbody');
+    tabelaBody.innerHTML = ''; // Limpar tabela antes de preenchê-la
+
+    for (let avaria of avarias) {
+        await new Promise(resolve => setTimeout(resolve, 150)); // adiciona um atraso de 150 ms entre as requisições
+
+        let detalhes = await detalhesAvaria(avaria.codigo, token);
+        let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
+        let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
+        let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
+
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${avaria.id}</td>
+            <td>${avaria.nomeCasaOracao}</td>
+            <td>${avaria.nome}</td>
+            <td>${detalhesDescricao}</td>
+            <td>${avaria.apoioAdministracao}</td>
+            <td>${avaria.ofereceRisco}</td>
+            <td>${avaria.necessarioAtividadeAltura}</td>
+            <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+            <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
+            <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
+            <td>${avaria.status}</td>
+            <td>${avaria.nomeChecklist}</td>
+            <td>${avaria.nomeChecklistItem}</td>
+            <td>${qtdAnexos}</td>
+            <td><button class="btn btn-secondary" onclick="mostrarRespostas('${avaria.codigo}')">Ver Respostas</button></td>
+        `;
+        tabelaBody.appendChild(row);
+    }
+
+    document.getElementById('loadingSpinner').classList.add('d-none');
+}
 
         async function mostrarRespostas(codigoAvaria) {
             let token = document.getElementById('token').value;
@@ -232,14 +280,16 @@
             document.execCommand('copy'); // Copiar para a área de transferência
             window.getSelection().removeAllRanges(); // Remover a seleção para evitar que o conteúdo fique selecionado
             alert('Tabela copiada para a área de transferência!');
-        }
+        }        
 
-        /*
         function sortTable(coluna) {
             let tabela = document.getElementById("tabela-relatorio");
             let linhas = Array.from(tabela.rows).slice(1); // Pega todas as linhas, exceto a primeira (cabeçalho)
             let ordemAscendente = tabela.getAttribute("data-ordem") !== "asc"; // Alterna entre ascendente e descendente
 
+
+            // Não está ordendando as datas corretamente***
+            /*
             linhas.sort((a, b) => {
                 let valorA = a.cells[coluna].innerText.trim();
                 let valorB = b.cells[coluna].innerText.trim();
@@ -256,20 +306,7 @@
 
                 return ordemAscendente ? valorA > valorB ? 1 : -1 : valorA < valorB ? 1 : -1;
             });
-
-            tabela.setAttribute("data-ordem", ordemAscendente ? "asc" : "desc");
-
-            // Remove as linhas existentes e adiciona as linhas ordenadas
-            let tbody = tabela.querySelector("tbody");
-            tbody.innerHTML = "";
-            linhas.forEach(linha => tbody.appendChild(linha));
-        }
-        */
-
-        function sortTable(coluna) {
-            let tabela = document.getElementById("tabela-relatorio");
-            let linhas = Array.from(tabela.rows).slice(1); // Pega todas as linhas, exceto a primeira (cabeçalho)
-            let ordemAscendente = tabela.getAttribute("data-ordem") !== "asc"; // Alterna entre ascendente e descendente
+            */
 
             linhas.sort((a, b) => {
                 let valorA = a.cells[coluna].innerText.trim();
