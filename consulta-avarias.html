@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGA - Relatório de Avarias </title>
+    <style>
+        table {
+            /*width: 100%;*/
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Relatório de Avarias</h1>
+    <label for="token">Bearer Token:</label>
+    <input type="text" id="token" placeholder="Insira o Bearer Token">
+    <button onclick="gerarRelatorio()">Gerar Relatório</button>
+    <div id="relatorio"></div>
+
+    <script>
+        const filtroJson = {
+            "filtro": {
+                "codigoTipoChecklist": null,
+                "codigoEstabelecimento": null,
+                "dataIni": null,
+                "dataFim": null,
+                "status": [
+                    {
+                        "codigo": 0,
+                        "nomeExibicao": "Pendente"
+                    },
+                    {
+                        "codigo": 3,
+                        "nomeExibicao": "Em andamento"
+                    },
+                    {
+                        "codigo": 2,
+                        "nomeExibicao": "Excluído"
+                    },
+                    {
+                        "codigo": 1,
+                        "nomeExibicao": "Finalizado"
+                    }
+                ],
+                "pesquisaRapida": ""
+            },
+            "paginacao": {
+                "paginaAtual": 0,
+                "quantidadePorPagina": "10",
+                "ordenarPor": null,
+                "ordenarDirecao": null
+            }
+        };
+
+        async function listadeAvarias(token) {
+            try {
+                let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(filtroJson)
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                }
+                let data = await response.json();
+                return data.dados;
+            } catch (error) {
+                console.error('Erro ao buscar dados de avarias:', error);
+                alert('Erro ao buscar dados de avarias: ' + error.message);
+                return null;
+            }
+        }
+
+        async function detalhesAvaria(codigoAvaria, token) {
+            try {
+                let response = await fetch(`https://siga-api.congregacao.org.br/api/mnt/mnt002/avaria-selecionar-por-codigo?codigoAvaria=${codigoAvaria}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                }
+                let data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(`Erro ao buscar detalhes da avaria ${codigoAvaria}:`, error);
+                //alert(`Erro ao buscar detalhes da avaria ${codigoAvaria}: ` + error.message);
+                return null;
+            }
+        }
+
+
+        async function respostasAvaria(codigoAvaria, token) {
+            try {
+                let response = await fetch(`https://siga-api.congregacao.org.br/api/mnt/mnt002/selecionar/avarias-anotacoes?codigoChecklistItemAvaria=${codigoAvaria}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                }
+                let data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(`Erro ao buscar detalhes da avaria ${codigoAvaria}:`, error);
+                //alert(`Erro ao buscar detalhes da avaria ${codigoAvaria}: ` + error.message);
+                return null;
+            }
+        }
+
+        async function gerarRelatorio() {
+            let token = document.getElementById('token').value;
+            if (!token) {
+                alert('Por favor, insira o Bearer Token.');
+                return;
+            }
+
+            let avarias = await listadeAvarias(token);
+            if (!avarias) {
+                return;
+            }
+
+            let relatorioDiv = document.getElementById('relatorio');
+            relatorioDiv.innerHTML = '';
+
+            let table = document.createElement('table');
+            let headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+            
+                <th>Código</th>
+                <!--
+                <th>ID</th>
+                <th>Código Checklist Item</th>
+                -->
+                <th>Nome</th>
+                <!--<th>Descrição</th>-->
+                <th>Apoio Administração</th>
+                <th>Oferece Risco</th>
+                <th>Necessário Atividade Altura</th>
+                <th>Data Avaria</th>
+                <th style="width:3000px">Detalhes</th>
+                <th>Data Correção</th>
+                <th>Descrição Correção</th>
+                <th>Status</th>
+                <th>Nome Casa Oração</th>
+                <th>Nome Checklist</th>
+                <th>Nome Checklist Item</th>
+                <th>Anexos</th>
+                <th>Comentários / Respostas</th>
+            `;
+            
+            
+            table.appendChild(headerRow);
+            
+            let resposta;
+            for (let avaria of avarias) {
+                let detalhes = await detalhesAvaria(avaria.codigo, token);
+                //console.log(detalhes.anexos.length);
+                let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
+                let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
+                let qtdAnexos = detalhes.anexos.length;
+
+                let respostas = await respostasAvaria(avaria.codigo, token);
+
+                if (respostas) {
+                    resposta = respostas.map(resposta => `
+                    
+                    Data e Hora: ${new Date(resposta.dataHora).toLocaleString()}
+                    Descrição: ${resposta.descricao}
+                    Usuário: ${resposta.usuario}
+                    Possui Anexos: ${resposta.possuiAnexos ? 'Sim' : 'Não'}
+                    ##
+                    
+                   
+                `).join('');
+                }
+                /*
+                if (respostas) {
+                    respostas.forEach(resposta => {
+                        console.log(`ID: ${resposta.id}`);
+                        console.log(`Código: ${resposta.codigo}`);
+                        console.log(`Data e Hora: ${resposta.dataHora}`);
+                        console.log(`Descrição: ${resposta.descricao}`);
+                        console.log(`Usuário: ${resposta.usuario}`);
+                        console.log(`Possui Anexos: ${resposta.possuiAnexos}`);
+                        console.log('-------------------');
+                    });
+                }
+                */
+
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${avaria.id}</td>
+                    <!--
+                    <td>${avaria.codigo}</td>
+                    <td>${avaria.codigoChecklistItem}</td>
+                    -->
+                    <td>${avaria.nome}</td>
+                    <!--<td>${avaria.descricao}</td>-->
+                    <td>${avaria.apoioAdministracao}</td>
+                    <td>${avaria.ofereceRisco}</td>
+                    <td style="width:2000px">${avaria.necessarioAtividadeAltura}</td>
+                    <td>${new Date(avaria.dataAvaria).toLocaleString()}</td>
+                    <td>${detalhesDescricao}</td>
+                    <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleString() : 'N/A'}</td>
+                    <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
+                    <td>${avaria.status}</td>
+                    <td>${avaria.nomeCasaOracao}</td>
+                    <td>${avaria.nomeChecklist}</td>
+                    <td>${avaria.nomeChecklistItem}</td>
+                    <td>${qtdAnexos}</td>
+                    <td nowrap>${resposta}</td>
+                `;
+                table.appendChild(row);
+            }
+
+            relatorioDiv.appendChild(table);
+        }
+    </script>
+</body>
+</html>
