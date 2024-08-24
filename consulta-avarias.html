@@ -1,52 +1,84 @@
 <!DOCTYPE html>
+<!--
+Este arquivo tem por finalidade auxiliar a consulta e extração de dados de avarias do sistema SIGA.
+Autor: Ailton Occhi
+Administração Regional Santo André - SP
+Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver este código. Deus Seja Louvado! Amém!
+-->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIGA - Relatório de Avarias</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
 </head>
 <body>
+    
     <div class="container-fluid mt-4">
         <h1>Relatório de Avarias - CCB SIGA</h1>
-        <div class="mb-3">
-            <label for="token" class="form-label">Bearer Token:</label>
-            <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token" oninput="onTokenInput()"/>       
-        </div>
-        <div class="mb-3">
-            <label for="statusSelect" class="form-label">Status:</label>
-            <select id="statusSelect" class="form-control" multiple="multiple">
-                <option value="0">0 - Pendente</option>
-                <option value="3">3 - Em andamento</option>
-                <option value="2">2 - Excluído</option>
-                <option value="1">1 - Finalizado</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="dataIni" class="form-label">Data Início:</label>
-            <input type="date" id="dataIni" class="form-control"/>
-        </div>
-        <div class="mb-3">
-            <label for="dataFim" class="form-label">Data Fim:</label>
-            <input type="date" id="dataFim" class="form-control"/>
-        </div>
-        <div class="mb-3">
-            <label for="estabelecimentoSelect" class="form-label">Estabelecimento:</label>
-            <select id="estabelecimentoSelect" class="form-control">
-                <!-- Opções serão carregadas dinamicamente -->
-            </select>
+        
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <label for="token" class="form-label">Bearer Token:</label>
+                <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token" oninput="onTokenInput()"/>       
+            </div>
         </div>
         
-        <div class="align-items-center mb-3">
-            <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
-            <button class="btn btn-secondary ms-2" onclick="copiarTabela()">Copiar Tabela</button>
-            <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
-            <input type="text" id="campoBusca" class="form-control mt-2" placeholder="Buscar..." onkeyup="filtrarTabela()">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="dataIni" class="form-label">Data Início:</label>
+                <input type="date" id="dataIni" class="form-control"/>
+            </div>
+            <div class="col-md-3">
+                <label for="dataFim" class="form-label">Data Fim:</label>
+                <input type="date" id="dataFim" class="form-control"/>
+            </div>
+            <div class="col-md-6">
+                <label for="localidadeSelect" class="form-label">Localidade:</label>
+                <select id="localidadeSelect" class="form-control">
+                    <!-- Opções serão carregadas dinamicamente -->
+                </select>
+            </div>
         </div>
+    
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="statusSelect" class="form-label">Status:</label>
+                <select id="statusSelect" class="form-control" multiple="multiple">
+                    <option value="0">0 - Pendente</option>
+                    <option value="3">3 - Em andamento</option>
+                    <option value="2">2 - Excluído</option>
+                    <option value="1">1 - Finalizado</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="tipoChecklistSelect" class="form-label">Tipo de Checklist:</label>
+                <select id="tipoChecklistSelect" class="form-control" multiple="multiple">
+                    <option value="1">Inspeção Semanal</option>
+                    <option value="4">Inspeção Semestral</option>
+                    <option value="2">Inspeção Visual Mensal</option>
+                    <option value="3">Inspeção Visual Trimestral</option>
+                </select>
+            </div>
+            
+        </div>
+    
+        <div class="row align-items-center mb-3">
+            <div class="col-md-8">
+                <input type="text" id="campoBusca" class="form-control" placeholder="Buscar na tabela..." onkeyup="filtrarTabela()">
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
+                <button class="btn btn-secondary ms-2" onclick="copiarTabela()">Copiar Tabela</button>
+                <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
+            </div>
+        </div>
+    
         <p id="totalRegistros" class="text-muted"></p>
-
+    
         <div id="spinner" class="text-center" style="display: none;">
             <div class="spinner-border" role="status">
                 <span class="visually-hidden">Carregando...</span>
@@ -54,34 +86,34 @@
             <p>Gerando relatório, por favor aguarde...</p>
         </div>
         
-        
         <table id="tabela-relatorio" class="table table-bordered table-hover table-striped">
             <thead class="table-dark">
                 <tr>
-                    <th onclick="sortTable(0)">Código</th>
-                    <th onclick="sortTable(1)">Casa Oração</th>
-                    <th onclick="sortTable(2)">Título Avaria</th>
-                    <th style="width:30%" onclick="sortTable(3)">Detalhes</th>
-                    <th onclick="sortTable(4)">Apoio Adm</th>
-                    <th onclick="sortTable(5)">Oferece Risco</th>
-                    <th onclick="sortTable(6)">Apoio Segurança</th>
-                    <th onclick="sortTable(7)">Data Avaria</th>
-                    <th onclick="sortTable(8)">Data Correção</th>
-                    <th style="width:20%" onclick="sortTable(9)">Descrição Correção</th>
-                    <th onclick="sortTable(10)">Status Avaria</th>
-                    <th onclick="sortTable(11)">Tipo Inspeção</th>
-                    <th onclick="sortTable(12)">Item Checklist</th>
-                    <th onclick="sortTable(13)">Anexos</th>
+                    <th onclick="ordenarTabela(0)">Código</th>
+                    <th onclick="ordenarTabela(1)">Casa Oração</th>
+                    <th onclick="ordenarTabela(2)">Título Avaria</th>
+                    <th style="width:30%" onclick="ordenarTabela(3)">Detalhes</th>
+                    <th onclick="ordenarTabela(4)">Apoio Adm</th>
+                    <th onclick="ordenarTabela(5)">Oferece Risco</th>
+                    <th onclick="ordenarTabela(6)">Apoio Segurança</th>
+                    <th onclick="ordenarTabela(7)">Data Avaria</th>
+                    <th onclick="ordenarTabela(8)">Data Correção</th>
+                    <th style="width:20%" onclick="ordenarTabela(9)">Descrição Correção</th>
+                    <th onclick="ordenarTabela(10)">Status Avaria</th>
+                    <th onclick="ordenarTabela(11)">Tipo Inspeção</th>
+                    <th onclick="ordenarTabela(12)">Item Checklist</th>
+                    <th onclick="ordenarTabela(13)">Anexos</th>
                     <th>Respostas</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- reservado para tabela (insert via java script) -->
+                <!-- reservado para tabela que será gerada dinamicamente -->
             </tbody>
         </table>
     </div>
+    
 
-    <!-- modal para exibir as respostas das avarias-->
+    <!-- modal com as respostas das avarias-->
     <div class="modal fade" id="respostasModal" tabindex="-1" aria-labelledby="respostasModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -99,32 +131,45 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.0/dist/jquery.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>        
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <script>
 
         $(document).ready(function() {
-            carregarEstabelecimentos(); // Carrega os estabelecimentos quando a página é carregada
+            carregarLocalidades(); // Carrega as localidades quando a página é carregada
 
             $('#statusSelect').select2({
+                theme: 'bootstrap-5',
                 placeholder: "Selecione os status",
-                allowClear: true
+                allowClear: true,
+                width: '100%'
             });
             
             $('#tipoChecklistSelect').select2({
+                theme: 'bootstrap-5',
                 placeholder: "Selecione o(s) tipo(s) de checklist",
-                allowClear: true
+                allowClear: true,
+                width: '100%'
+            });
+
+            $('#localidadeSelect').select2({
+                theme: 'bootstrap-5',
+                placeholder: "Selecione a localidade (Opcional)",
+                allowClear: true,
+                width: '100%'
             });
         });
 
-        const filtroJson = {
+        const filtroJsonPadrao = {
             "filtro": {
                 "codigoTipoChecklist": null,
                 "codigoEstabelecimento": null,
-                //"dataIni": "2024-07-01",
-                //"dataFim": "2024-07-31",
+                "dataIni": null,
+                "dataFim": null,
                 "status": [
                     { "codigo": 0, "nomeExibicao": "Pendente" },
                     { "codigo": 3, "nomeExibicao": "Em andamento" },
@@ -135,13 +180,13 @@
             },
             "paginacao": {
                 "paginaAtual": 0,
-                "quantidadePorPagina": "100",
+                "quantidadePorPagina": "100", //Limite de 100 registros por página (máximo SIGA)
                 "ordenarPor": null,
                 "ordenarDirecao": null
             }
         };
 
-        const statusMap = {
+        const statusAvarias = {
             0: 'Pendente',
             1: 'Finalizado',
             2: 'Excluído',
@@ -151,7 +196,7 @@
         function onTokenInput() {
             let token = document.getElementById('token').value;
             if (token) {
-                carregarEstabelecimentos();
+                carregarLocalidades();
             }
         }
 
@@ -197,7 +242,7 @@
 
         async function listadeAvarias(token, pagina) {
             try {
-                filtroJson.paginacao.paginaAtual = pagina;
+                filtroJsonPadrao.paginacao.paginaAtual = pagina;
 
                 let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
                     method: 'POST',
@@ -205,7 +250,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + token
                     },
-                    body: JSON.stringify(filtroJson)
+                    body: JSON.stringify(filtroJsonPadrao)
                 });
 
                 if (!response.ok) {
@@ -223,11 +268,11 @@
 
         async function gerarRelatorio() {
             let token = document.getElementById('token').value;
-            let dataIni = document.getElementById('dataIni').value;
+            let dataInicio = document.getElementById('dataIni').value;
             let dataFim = document.getElementById('dataFim').value;
             let statusSelecionados = $('#statusSelect').val();
             let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
-            let estabelecimentoSelecionado = $('#estabelecimentoSelect').val(); // Pega o valor selecionado para estabelecimento
+            let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
 
             if (!token) {
                 alert('Por favor, insira o Bearer Token.');
@@ -237,25 +282,25 @@
             document.getElementById('spinner').style.display = 'block';
             //document.getElementById('tabela-relatorio').style.display = 'none';
 
-            filtroJson.filtro.dataIni = dataIni ? dataIni : null;
-            filtroJson.filtro.dataFim = dataFim ? dataFim : null;
+            filtroJsonPadrao.filtro.dataIni = dataInicio ? dataInicio : null;
+            filtroJsonPadrao.filtro.dataFim = dataFim ? dataFim : null;
 
             if (statusSelecionados && statusSelecionados.length > 0) {
-                filtroJson.filtro.status = statusSelecionados.map(codigo => {
+                filtroJsonPadrao.filtro.status = statusSelecionados.map(codigo => {
                     return { "codigo": parseInt(codigo) };
                 });
             }
 
             if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
-                filtroJson.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
+                filtroJsonPadrao.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
                     return parseInt(codigo);
                 });
             }
 
-            if (estabelecimentoSelecionado) {
-                filtroJson.filtro.codigoEstabelecimento = parseInt(estabelecimentoSelecionado); // Apenas um estabelecimento
+            if (localidadeSelecionada) {
+                filtroJsonPadrao.filtro.codigoEstabelecimento = parseInt(localidadeSelecionada); // Apenas um localidade
             } else {
-                filtroJson.filtro.codigoEstabelecimento = null;
+                filtroJsonPadrao.filtro.codigoEstabelecimento = null;
             }
 
             let primeiraPagina = await listadeAvarias(token, 1);
@@ -288,7 +333,12 @@
                 let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
                 let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
                 let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
-                let statusDescricao = statusMap[avaria.status];
+                let statusDescricao = statusAvarias[avaria.status];
+
+                // Convertendo booleanos para "Sim" ou "Não"
+                let apoioAdm = avaria.apoioAdministracao ? 'Sim' : 'Não';
+                let ofereceRisco = avaria.ofereceRisco ? 'Sim' : 'Não';
+                let apoioSeguranca = avaria.necessarioAtividadeAltura ? 'Sim' : 'Não';
 
                 let row = document.createElement('tr');
                 row.innerHTML = `
@@ -296,9 +346,9 @@
                     <td>${avaria.nomeCasaOracao}</td>
                     <td>${avaria.nome}</td>
                     <td>${detalhesDescricao}</td>
-                    <td>${avaria.apoioAdministracao}</td>
-                    <td>${avaria.ofereceRisco}</td>
-                    <td>${avaria.necessarioAtividadeAltura}</td>
+                    <td>${apoioAdm}</td>
+                    <td>${ofereceRisco}</td>
+                    <td>${apoioSeguranca}</td>
                     <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                     <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
                     <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
@@ -357,13 +407,13 @@
             alert('Tabela copiada para a área de transferência!');
         }
 
-        function sortTable(coluna) {
+        function ordenarTabela(coluna) {
             let tabela = document.getElementById("tabela-relatorio");
             let linhas = Array.from(tabela.rows).slice(1); // Pega todas as linhas, exceto a primeira (cabeçalho)
             let ordemAscendente = tabela.getAttribute("data-ordem") !== "asc"; // Alterna entre ascendente e descendente
 
 
-            // Não faz ordenação de datas e números corretamente
+            // Não esta fazendo ordenação de datas e números corretamente
             /*
             linhas.sort((a, b) => {
                 let valorA = a.cells[coluna].innerText.trim();
@@ -445,7 +495,7 @@
             }
         }
 
-        async function carregarEstabelecimentos() {
+        async function carregarLocalidades() {
             let token = document.getElementById('token').value;
             if (!token) {
                 return;
@@ -461,33 +511,42 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Erro ao buscar os estabelecimentos: ' + response.statusText);
+                    throw new Error('Erro ao buscar as localidades: ' + response.statusText);
                 }
 
-                let estabelecimentos = await response.json();
+                let localidades = await response.json();
 
                 // Preencher o select com as opções
-                let selectElement = document.getElementById('estabelecimentoSelect');
+                let selectElement = document.getElementById('localidadeSelect');
                 selectElement.innerHTML = ''; // Limpa as opções anteriores
-                estabelecimentos.forEach(estabelecimento => {
+
+                // Adiciona uma opção vazia no início
+                let emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = '';
+                selectElement.appendChild(emptyOption);
+
+                localidades.forEach(localidade => {
                     let option = document.createElement('option');
-                    option.value = estabelecimento.codigo;
-                    option.textContent = estabelecimento.nomeExibicao;
+                    option.value = localidade.codigo;
+                    option.textContent = localidade.nomeExibicao;
                     selectElement.appendChild(option);
                 });
 
                 // Inicializar o Select2 após o carregamento dos dados
-                $('#estabelecimentoSelect').select2({
-                    placeholder: "Selecione o estabelecimento",
-                    allowClear: true
+                $('#localidadeSelect').select2({
+                    theme: 'bootstrap-5',
+                    placeholder: "Selecione a localidade",
+                    allowClear: true,
+                    width: '100%'
                 });
 
             } catch (error) {
                 console.error(error);
-                alert('Erro ao carregar os estabelecimentos: ' + error.message);
+                alert('Erro ao carregar as localidades: ' + error.message);
             }
         }
-    
+
     </script>
 
 </body>
