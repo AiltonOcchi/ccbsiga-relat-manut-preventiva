@@ -13,7 +13,7 @@
         <h1>Relatório de Avarias - CCB SIGA</h1>
         <div class="mb-3">
             <label for="token" class="form-label">Bearer Token:</label>
-            <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token"/>       
+            <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token" oninput="onTokenInput()"/>       
         </div>
         <div class="mb-3">
             <label for="statusSelect" class="form-label">Status:</label>
@@ -32,12 +32,20 @@
             <label for="dataFim" class="form-label">Data Fim:</label>
             <input type="date" id="dataFim" class="form-control"/>
         </div>
+        <div class="mb-3">
+            <label for="estabelecimentoSelect" class="form-label">Estabelecimento:</label>
+            <select id="estabelecimentoSelect" class="form-control">
+                <!-- Opções serão carregadas dinamicamente -->
+            </select>
+        </div>
+        
         <div class="align-items-center mb-3">
             <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
             <button class="btn btn-secondary ms-2" onclick="copiarTabela()">Copiar Tabela</button>
             <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
             <input type="text" id="campoBusca" class="form-control mt-2" placeholder="Buscar..." onkeyup="filtrarTabela()">
         </div>
+        <p id="totalRegistros" class="text-muted"></p>
 
         <div id="spinner" class="text-center" style="display: none;">
             <div class="spinner-border" role="status">
@@ -98,8 +106,15 @@
     <script>
 
         $(document).ready(function() {
+            carregarEstabelecimentos(); // Carrega os estabelecimentos quando a página é carregada
+
             $('#statusSelect').select2({
                 placeholder: "Selecione os status",
+                allowClear: true
+            });
+            
+            $('#tipoChecklistSelect').select2({
+                placeholder: "Selecione o(s) tipo(s) de checklist",
                 allowClear: true
             });
         });
@@ -133,6 +148,12 @@
             3: 'Em andamento'
         };
 
+        function onTokenInput() {
+            let token = document.getElementById('token').value;
+            if (token) {
+                carregarEstabelecimentos();
+            }
+        }
 
         async function detalhesAvaria(codigoAvaria, token) {
             try {
@@ -205,17 +226,16 @@
             let dataIni = document.getElementById('dataIni').value;
             let dataFim = document.getElementById('dataFim').value;
             let statusSelecionados = $('#statusSelect').val();
+            let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
+            let estabelecimentoSelecionado = $('#estabelecimentoSelect').val(); // Pega o valor selecionado para estabelecimento
 
             if (!token) {
                 alert('Por favor, insira o Bearer Token.');
                 return;
             }
 
-            // Mostrar o spinner
             document.getElementById('spinner').style.display = 'block';
-
-            // Esconder a tabela enquanto carrega
-            document.getElementById('tabela-relatorio').style.display = 'none';
+            //document.getElementById('tabela-relatorio').style.display = 'none';
 
             filtroJson.filtro.dataIni = dataIni ? dataIni : null;
             filtroJson.filtro.dataFim = dataFim ? dataFim : null;
@@ -224,19 +244,24 @@
                 filtroJson.filtro.status = statusSelecionados.map(codigo => {
                     return { "codigo": parseInt(codigo) };
                 });
+            }
+
+            if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
+                filtroJson.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
+                    return parseInt(codigo);
+                });
+            }
+
+            if (estabelecimentoSelecionado) {
+                filtroJson.filtro.codigoEstabelecimento = parseInt(estabelecimentoSelecionado); // Apenas um estabelecimento
             } else {
-                filtroJson.filtro.status = [
-                    { "codigo": 0, "nomeExibicao": "Pendente" },
-                    { "codigo": 3, "nomeExibicao": "Em andamento" },
-                    { "codigo": 2, "nomeExibicao": "Excluído" },
-                    { "codigo": 1, "nomeExibicao": "Finalizado" }
-                ];
+                filtroJson.filtro.codigoEstabelecimento = null;
             }
 
             let primeiraPagina = await listadeAvarias(token, 1);
             if (!primeiraPagina) {
                 document.getElementById('spinner').style.display = 'none';
-                document.getElementById('tabela-relatorio').style.display = 'block';
+                //document.getElementById('tabela-relatorio').style.display = 'block';
                 return;
             }
 
@@ -286,9 +311,11 @@
                 tabelaBody.appendChild(row);
             }
 
-            // Esconder o spinner e mostrar a tabela após o carregamento
+            // Atualiza o texto do elemento para mostrar o total de registros
+            document.getElementById('totalRegistros').textContent = `Total de registros: ${totalLinhas}`;
+
             document.getElementById('spinner').style.display = 'none';
-            document.getElementById('tabela-relatorio').style.display = 'table';
+            //document.getElementById('tabela-relatorio').style.display = 'table';
         }
 
         async function mostrarRespostas(codigoAvaria) {
@@ -418,6 +445,49 @@
             }
         }
 
+        async function carregarEstabelecimentos() {
+            let token = document.getElementById('token').value;
+            if (!token) {
+                return;
+            }
+
+            try {
+                let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/listar/estabelecimentos', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar os estabelecimentos: ' + response.statusText);
+                }
+
+                let estabelecimentos = await response.json();
+
+                // Preencher o select com as opções
+                let selectElement = document.getElementById('estabelecimentoSelect');
+                selectElement.innerHTML = ''; // Limpa as opções anteriores
+                estabelecimentos.forEach(estabelecimento => {
+                    let option = document.createElement('option');
+                    option.value = estabelecimento.codigo;
+                    option.textContent = estabelecimento.nomeExibicao;
+                    selectElement.appendChild(option);
+                });
+
+                // Inicializar o Select2 após o carregamento dos dados
+                $('#estabelecimentoSelect').select2({
+                    placeholder: "Selecione o estabelecimento",
+                    allowClear: true
+                });
+
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao carregar os estabelecimentos: ' + error.message);
+            }
+        }
+    
     </script>
 
 </body>
