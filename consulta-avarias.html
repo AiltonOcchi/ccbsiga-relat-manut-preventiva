@@ -42,12 +42,12 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- As linhas serão inseridas aqui via JavaScript -->
+                <!-- reservado para tabela (insert via java script) -->
             </tbody>
         </table>
     </div>
 
-    <!-- Modal para exibir respostas -->
+    <!-- modal para exibir as respostas das avarias-->
     <div class="modal fade" id="respostasModal" tabindex="-1" aria-labelledby="respostasModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -90,28 +90,6 @@
             }
         };
 
-        async function listadeAvarias(token) {
-            try {
-                let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
-                    },
-                    body: JSON.stringify(filtroJson)
-                });
-                if (!response.ok) {
-                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-                }
-                let data = await response.json();
-                return data.dados;
-            } catch (error) {
-                console.error('Erro ao buscar dados de avarias:', error);
-                alert('Erro ao buscar dados de avarias: ' + error.message);
-                return null;
-            }
-        }
-
         async function detalhesAvaria(codigoAvaria, token) {
             try {
                 let response = await fetch(`https://siga-api.congregacao.org.br/api/mnt/mnt002/avaria-selecionar-por-codigo?codigoAvaria=${codigoAvaria}`, {
@@ -152,6 +130,32 @@
             }
         }
 
+        async function listadeAvarias(token, pagina) {
+            try {
+                filtroJson.paginacao.paginaAtual = pagina;
+
+                let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(filtroJson)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                }
+                
+                let data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Erro ao buscar dados de avarias:', error);
+                alert('Erro ao buscar dados de avarias: ' + error.message);
+                return null;
+            }
+        }
+
         async function gerarRelatorio() {
             let token = document.getElementById('token').value;
             if (!token) {
@@ -159,17 +163,33 @@
                 return;
             }
 
-            let avarias = await listadeAvarias(token);
-            if (!avarias) {
+            // Fazer a primeira requisição para obter informações básicas
+            let primeiraPagina = await listadeAvarias(token, 1);
+            if (!primeiraPagina) {
                 return;
             }
 
+            // Acessar as informações básicas
+            let totalLinhas = primeiraPagina.totalLinhas;
+            let quantidadePorPagina = primeiraPagina.quantitadePorPagina;
+            let totalPaginas = Math.ceil(totalLinhas / quantidadePorPagina);
+
+            let avarias = primeiraPagina.dados;  // Acumula os dados da primeira página
+
+            // Iterar por todas as páginas para obter todos os registros
+            for (let pagina = 2; pagina <= totalPaginas; pagina++) {
+                let paginaDados = await listadeAvarias(token, pagina);
+                if (paginaDados && paginaDados.dados) {
+                    avarias = avarias.concat(paginaDados.dados); // Acumula os dados das páginas seguintes
+                }
+            }
+
             let tabelaBody = document.querySelector('#tabela-relatorio tbody');
-            tabelaBody.innerHTML = '';
+            tabelaBody.innerHTML = ''; // Limpa a tabela antes de adicionar as novas linhas
 
+            // Preencher a tabela com todos os dados acumulados
             for (let avaria of avarias) {
-
-                await new Promise(resolve => setTimeout(resolve, 150));
+                await new Promise(resolve => setTimeout(resolve, 100));
 
                 let detalhes = await detalhesAvaria(avaria.codigo, token);
                 let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
@@ -324,7 +344,6 @@
                 linhas[i].style.display = encontrado ? '' : 'none';
             }
         }
-
 
     </script>
 
