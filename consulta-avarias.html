@@ -18,114 +18,137 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
 <body>
     
     <div class="container-fluid mt-4">
-        <h1>Relatório de Avarias - CCB SIGA</h1>
-        
-        <div class="row mb-3">
-            <div class="col-md-12">
-                <label for="token" class="form-label">Bearer Token:</label>
-                <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token" oninput="onTokenInput()"/>       
-            </div>
-        </div>
-        
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <label for="dataIni" class="form-label">Data Início:</label>
-                <input type="date" id="dataIni" class="form-control"/>
-            </div>
-            <div class="col-md-3">
-                <label for="dataFim" class="form-label">Data Fim:</label>
-                <input type="date" id="dataFim" class="form-control"/>
-            </div>
-            <div class="col-md-6">
-                <label for="localidadeSelect" class="form-label">Localidade:</label>
-                <select id="localidadeSelect" class="form-control">
-                    <!-- Opções serão carregadas dinamicamente -->
-                </select>
-            </div>
-        </div>
-    
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="statusSelect" class="form-label">Status:</label>
-                <select id="statusSelect" class="form-control" multiple="multiple">
-                    <option value="0">0 - Pendente</option>
-                    <option value="3">3 - Em andamento</option>
-                    <option value="2">2 - Excluído</option>
-                    <option value="1">1 - Finalizado</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label for="tipoChecklistSelect" class="form-label">Tipo de Checklist:</label>
-                <select id="tipoChecklistSelect" class="form-control" multiple="multiple">
-                    <option value="1">Inspeção Semanal</option>
-                    <option value="4">Inspeção Semestral</option>
-                    <option value="2">Inspeção Visual Mensal</option>
-                    <option value="3">Inspeção Visual Trimestral</option>
-                </select>
+        <h1>Relatório de Avarias - CCB SIGA</h1>    
+
+        <div class="accordion" id="accordionExample">
+            <!-- Accordion Extração de Dados -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingExtraction">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExtraction" aria-expanded="true" aria-controls="collapseExtraction">
+                        Extração de Dados
+                    </button>
+                </h2>
+                <div id="collapseExtraction" class="accordion-collapse collapse show" aria-labelledby="headingExtraction" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <!-- Todo o conteúdo atual foi movido para cá -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="token" class="form-label">Bearer Token:</label>
+                                <input type="text" id="token" class="form-control" placeholder="Insira o Bearer Token" oninput="onTokenInput()"/>       
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="dataIni" class="form-label">Data Início:</label>
+                                <input type="date" id="dataIni" class="form-control"/>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="dataFim" class="form-label">Data Fim:</label>
+                                <input type="date" id="dataFim" class="form-control"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="localidadeSelect" class="form-label">Localidade:</label>
+                                <select id="localidadeSelect" class="form-control">
+                                    <!-- Opções serão carregadas dinamicamente -->
+                                </select>
+                            </div>
+                        </div>
+                    
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="statusSelect" class="form-label">Status:</label>
+                                <select id="statusSelect" class="form-control" multiple="multiple">
+                                    <option value="0">0 - Pendente</option>
+                                    <option value="3">3 - Em andamento</option>
+                                    <option value="2">2 - Excluído</option>
+                                    <option value="1">1 - Finalizado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="tipoChecklistSelect" class="form-label">Tipo de Checklist:</label>
+                                <select id="tipoChecklistSelect" class="form-control" multiple="multiple">
+                                    <option value="1">Inspeção Semanal</option>
+                                    <option value="4">Inspeção Semestral</option>
+                                    <option value="2">Inspeção Visual Mensal</option>
+                                    <option value="3">Inspeção Visual Trimestral</option>
+                                </select>
+                            </div>
+                        </div>
+                    
+                        <div class="row align-items-center mb-3">
+                            <div class="col-md-7">
+                                <input type="text" id="campoBusca" class="form-control" placeholder="Buscar na tabela..." onkeyup="filtrarTabela()">
+                            </div>
+                            <div class="col-md-5 text-end">
+                                <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
+                                <button class="btn btn-secondary ms-2" onclick="copiarTabela()">Copiar Tabela</button>
+                                <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
+                            </div>
+                        </div>
+                    
+                        <p id="totalRegistros" class="text-muted"></p>
+                    
+                        <div id="spinner" class="text-center" style="display: none;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p>Gerando relatório, por favor aguarde...</p>
+                        </div>
+                        
+                        <table id="tabela-relatorio" class="table table-bordered table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th onclick="ordenarTabela(0)">Código</th>
+                                    <th onclick="ordenarTabela(1)">Casa Oração</th>
+                                    <th onclick="ordenarTabela(2)">Título Avaria</th>
+                                    <th style="width:30%" onclick="ordenarTabela(3)">Detalhes</th>
+                                    <th onclick="ordenarTabela(4)">Apoio Adm</th>
+                                    <th onclick="ordenarTabela(5)">Oferece Risco</th>
+                                    <th onclick="ordenarTabela(6)">Apoio Segurança</th>
+                                    <th onclick="ordenarTabela(7)">Data Avaria</th>
+                                    <th onclick="ordenarTabela(8)">Data Correção</th>
+                                    <th style="width:20%" onclick="ordenarTabela(9)">Descrição Correção</th>
+                                    <th onclick="ordenarTabela(10)">Status Avaria</th>
+                                    <th onclick="ordenarTabela(11)">Tipo Inspeção</th>
+                                    <th onclick="ordenarTabela(12)">Item Checklist</th>
+                                    <th onclick="ordenarTabela(13)">Anexos</th>
+                                    <th>Respostas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- reservado para tabela que será gerada dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             
-        </div>
-    
-        <div class="row align-items-center mb-3">
-            <div class="col-md-8">
-                <input type="text" id="campoBusca" class="form-control" placeholder="Buscar na tabela..." onkeyup="filtrarTabela()">
+            <!-- Accordion Status Atual -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingStatus">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStatus" aria-expanded="false" aria-controls="collapseStatus">
+                        Status Atual
+                    </button>
+                </h2>
+                <div id="collapseStatus" class="accordion-collapse collapse" aria-labelledby="headingStatus" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <!-- Conteúdo para "Status Atual" será adicionado aqui -->
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-primary" onclick="gerarRelatorio()">Gerar Relatório</button>
-                <button class="btn btn-secondary ms-2" onclick="copiarTabela()">Copiar Tabela</button>
-                <button class="btn btn-success ms-2" onclick="exportarTabelaParaExcel()">Exportar para Excel</button>
-            </div>
-        </div>
-    
-        <p id="totalRegistros" class="text-muted"></p>
-    
-        <div id="spinner" class="text-center" style="display: none;">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Carregando...</span>
-            </div>
-            <p>Gerando relatório, por favor aguarde...</p>
-        </div>
-        
-        <table id="tabela-relatorio" class="table table-bordered table-hover table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th onclick="ordenarTabela(0)">Código</th>
-                    <th onclick="ordenarTabela(1)">Casa Oração</th>
-                    <th onclick="ordenarTabela(2)">Título Avaria</th>
-                    <th style="width:30%" onclick="ordenarTabela(3)">Detalhes</th>
-                    <th onclick="ordenarTabela(4)">Apoio Adm</th>
-                    <th onclick="ordenarTabela(5)">Oferece Risco</th>
-                    <th onclick="ordenarTabela(6)">Apoio Segurança</th>
-                    <th onclick="ordenarTabela(7)">Data Avaria</th>
-                    <th onclick="ordenarTabela(8)">Data Correção</th>
-                    <th style="width:20%" onclick="ordenarTabela(9)">Descrição Correção</th>
-                    <th onclick="ordenarTabela(10)">Status Avaria</th>
-                    <th onclick="ordenarTabela(11)">Tipo Inspeção</th>
-                    <th onclick="ordenarTabela(12)">Item Checklist</th>
-                    <th onclick="ordenarTabela(13)">Anexos</th>
-                    <th>Respostas</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- reservado para tabela que será gerada dinamicamente -->
-            </tbody>
-        </table>
-    </div>
-    
 
-    <!-- modal com as respostas das avarias-->
-    <div class="modal fade" id="respostasModal" tabindex="-1" aria-labelledby="respostasModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="respostasModalLabel">Respostas da Avaria</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="respostasConteudo"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            <!-- Accordion Evolução -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingEvolution">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvolution" aria-expanded="false" aria-controls="collapseEvolution">
+                        Evolução
+                    </button>
+                </h2>
+                <div id="collapseEvolution" class="accordion-collapse collapse" aria-labelledby="headingEvolution" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <!-- Conteúdo para "Evolução" será adicionado aqui -->
+                    </div>
                 </div>
             </div>
         </div>
