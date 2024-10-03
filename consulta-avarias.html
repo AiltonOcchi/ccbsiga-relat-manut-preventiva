@@ -312,177 +312,232 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
         }
         
         async function gerarRelatorio() {
-        let token = document.getElementById('token').value;
-        let dataInicio = document.getElementById('dataIni').value;
-        let dataFim = document.getElementById('dataFim').value;
-        let statusSelecionados = $('#statusSelect').val();
-        let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
-        let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
+    let token = document.getElementById('token').value;
+    let dataInicio = document.getElementById('dataIni').value;
+    let dataFim = document.getElementById('dataFim').value;
+    let statusSelecionados = $('#statusSelect').val();
+    let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
+    let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
 
-        if (!token) {
-            alert('Por favor, insira o Bearer Token.');
-            return;
+    if (!token) {
+        alert('Por favor, insira o Bearer Token.');
+        return;
+    }
+
+    document.getElementById('spinner').style.display = 'block';
+
+    filtroJsonPadrao.filtro.dataIni = dataInicio ? dataInicio : null;
+    filtroJsonPadrao.filtro.dataFim = dataFim ? dataFim : null;
+
+    if (statusSelecionados && statusSelecionados.length > 0) {
+        filtroJsonPadrao.filtro.status = statusSelecionados.map(codigo => {
+            return { "codigo": parseInt(codigo) };
+        });
+    }
+
+    if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
+        filtroJsonPadrao.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
+            return parseInt(codigo);
+        });
+    }
+
+    if (localidadeSelecionada) {
+        filtroJsonPadrao.filtro.codigoEstabelecimento = parseInt(localidadeSelecionada); // Apenas um localidade
+    } else {
+        filtroJsonPadrao.filtro.codigoEstabelecimento = null;
+    }
+
+    let primeiraPagina = await listadeAvarias(token, 1);
+    if (!primeiraPagina) {
+        document.getElementById('spinner').style.display = 'none';
+        return;
+    }
+
+    let totalLinhas = primeiraPagina.totalLinhas;
+    let quantidadePorPagina = primeiraPagina.quantitadePorPagina;
+    let totalPaginas = Math.ceil(totalLinhas / quantidadePorPagina);
+
+    let avarias = primeiraPagina.dados;
+
+    for (let pagina = 2; pagina <= totalPaginas; pagina++) {
+        let paginaDados = await listadeAvarias(token, pagina);
+        if (paginaDados && paginaDados.dados) {
+            avarias = avarias.concat(paginaDados.dados);
         }
+    }
 
-        document.getElementById('spinner').style.display = 'block';
+    // Contagem de status
+    let contagemStatus = {
+        pendente: 0,
+        emAndamento: 0,
+        finalizado: 0,
+        excluido: 0
+    };
 
-        filtroJsonPadrao.filtro.dataIni = dataInicio ? dataInicio : null;
-        filtroJsonPadrao.filtro.dataFim = dataFim ? dataFim : null;
+    // Contagem de "Item Checklist" dinâmica
+    let contagemItemChecklist = {};
 
-        if (statusSelecionados && statusSelecionados.length > 0) {
-            filtroJsonPadrao.filtro.status = statusSelecionados.map(codigo => {
-                return { "codigo": parseInt(codigo) };
-            });
-        }
+    // Contagem de "Casa Oração"
+    let contagemCasaOracao = {};
 
-        if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
-            filtroJsonPadrao.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
-                return parseInt(codigo);
-            });
-        }
+    // Contagem de "Apoio Adm", "Oferece Risco" e "Apoio Segurança"
+    let contagemApoioAdm = { sim: 0, nao: 0 };
+    let contagemOfereceRisco = { sim: 0, nao: 0 };
+    let contagemApoioSeguranca = { sim: 0, nao: 0 };
 
-        if (localidadeSelecionada) {
-            filtroJsonPadrao.filtro.codigoEstabelecimento = parseInt(localidadeSelecionada); // Apenas um localidade
-        } else {
-            filtroJsonPadrao.filtro.codigoEstabelecimento = null;
-        }
+    // Contagem de "Tipo Inspeção"
+    let contagemTipoInspecao = {};
 
-        let primeiraPagina = await listadeAvarias(token, 1);
-        if (!primeiraPagina) {
-            document.getElementById('spinner').style.display = 'none';
-            return;
-        }
-
-        let totalLinhas = primeiraPagina.totalLinhas;
-        let quantidadePorPagina = primeiraPagina.quantitadePorPagina;
-        let totalPaginas = Math.ceil(totalLinhas / quantidadePorPagina);
-
-        let avarias = primeiraPagina.dados;
-
-        for (let pagina = 2; pagina <= totalPaginas; pagina++) {
-            let paginaDados = await listadeAvarias(token, pagina);
-            if (paginaDados && paginaDados.dados) {
-                avarias = avarias.concat(paginaDados.dados);
-            }
-        }
-
+    // Percorrer as avarias e contar os status, itens de checklist, casas de oração, e os campos booleanos
+    avarias.forEach(avaria => {
         // Contagem de status
-        let contagemStatus = {
-            pendente: 0,
-            emAndamento: 0,
-            finalizado: 0,
-            excluido: 0
-        };
+        switch (avaria.status) {
+            case 0:
+                contagemStatus.pendente++;
+                break;
+            case 3:
+                contagemStatus.emAndamento++;
+                break;
+            case 1:
+                contagemStatus.finalizado++;
+                break;
+            case 2:
+                contagemStatus.excluido++;
+                break;
+        }
 
-        // Contagem de "Item Checklist" dinâmica
-        let contagemItemChecklist = {};
+        // Contagem de "Item Checklist"
+        let itemChecklist = avaria.nomeChecklistItem;
+        if (itemChecklist.includes("Instalações Hidráulicas")) {
+            itemChecklist = "Instalações Hidráulicas"; // Simplifica o nome
+        }
+        if (contagemItemChecklist[itemChecklist]) {
+            contagemItemChecklist[itemChecklist]++;
+        } else {
+            contagemItemChecklist[itemChecklist] = 1; // Inicializa a contagem para o novo item
+        }
 
         // Contagem de "Casa Oração"
-        let contagemCasaOracao = {};
-
-        // Percorrer as avarias e contar os status, itens de checklist e casa de oração
-        avarias.forEach(avaria => {
-            // Contagem de status
-            switch (avaria.status) {
-                case 0:
-                    contagemStatus.pendente++;
-                    break;
-                case 3:
-                    contagemStatus.emAndamento++;
-                    break;
-                case 1:
-                    contagemStatus.finalizado++;
-                    break;
-                case 2:
-                    contagemStatus.excluido++;
-                    break;
-            }
-
-            // Contagem de "Item Checklist"
-            let itemChecklist = avaria.nomeChecklistItem;
-
-            // Verifica se o item é "Instalações Hidráulicas"
-            if (itemChecklist.includes("Instalações Hidráulicas")) {
-                itemChecklist = "Instalações Hidráulicas"; // Simplifica o nome
-            }
-
-            if (contagemItemChecklist[itemChecklist]) {
-                contagemItemChecklist[itemChecklist]++;
-            } else {
-                contagemItemChecklist[itemChecklist] = 1; // Inicializa a contagem para o novo item
-            }
-
-             // Contagem de "Casa Oração"
-            let casaOracao = avaria.nomeCasaOracao;
-            if (contagemCasaOracao[casaOracao]) {
-                contagemCasaOracao[casaOracao]++;
-            } else {
-                contagemCasaOracao[casaOracao] = 1; // Inicializa a contagem para a nova casa
-            }
-        });
-
-        // Atualizar o conteúdo do Accordion "Status Atual" com as contagens
-        let conteudoStatus = `
-            <p>Total de Avarias: ${totalLinhas}</p>
-            <p>Pendente: ${contagemStatus.pendente}</p>
-            <p>Em Andamento: ${contagemStatus.emAndamento}</p>
-            <p>Finalizado: ${contagemStatus.finalizado}</p>
-            <p>Excluído: ${contagemStatus.excluido}</p>
-            <h5>Total por Item Checklist:</h5>
-        `;
-
-        // Adiciona as contagens de "Item Checklist"
-        for (let item in contagemItemChecklist) {
-            conteudoStatus += `<p>${item}: ${contagemItemChecklist[item]}</p>`;
+        let casaOracao = avaria.nomeCasaOracao;
+        if (contagemCasaOracao[casaOracao]) {
+            contagemCasaOracao[casaOracao]++;
+        } else {
+            contagemCasaOracao[casaOracao] = 1; // Inicializa a contagem para a nova casa
         }
 
-        // Adiciona as contagens de "Casa Oração"
-        conteudoStatus += `<h5>Total por Casa Oração:</h5>`;
-        for (let casa in contagemCasaOracao) {
-            conteudoStatus += `<p>${casa}: ${contagemCasaOracao[casa]}</p>`;
+        // Contagem de "Apoio Adm"
+        if (avaria.apoioAdministracao) {
+            contagemApoioAdm.sim++;
+        } else {
+            contagemApoioAdm.nao++;
         }
 
-        document.getElementById('totalRegistros').innerHTML = conteudoStatus;
-
-        let tabelaBody = document.querySelector('#tabela-relatorio tbody');
-        tabelaBody.innerHTML = '';
-
-        for (let avaria of avarias) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            let detalhes = await detalhesAvaria(avaria.codigo, token);
-            let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
-            let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
-            let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
-            let statusDescricao = statusAvarias[avaria.status];
-
-            let apoioAdm = avaria.apoioAdministracao ? 'Sim' : 'Não';
-            let ofereceRisco = avaria.ofereceRisco ? 'Sim' : 'Não';
-            let apoioSeguranca = avaria.necessarioAtividadeAltura ? 'Sim' : 'Não';
-
-            let row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${avaria.id}</td>
-                <td>${avaria.nomeCasaOracao}</td>
-                <td>${avaria.nome}</td>
-                <td>${detalhesDescricao}</td>
-                <td>${apoioAdm}</td>
-                <td>${ofereceRisco}</td>
-                <td>${apoioSeguranca}</td>
-                <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
-                <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
-                <td>${statusDescricao}</td>
-                <td>${avaria.nomeChecklist}</td>
-                <td>${avaria.nomeChecklistItem}</td>
-                <td>${qtdAnexos}</td>
-                <td><button class="btn btn-secondary" onclick="mostrarRespostas('${avaria.codigo}')">Ver Respostas</button></td>
-            `;
-            tabelaBody.appendChild(row);
+        // Contagem de "Oferece Risco"
+        if (avaria.ofereceRisco) {
+            contagemOfereceRisco.sim++;
+        } else {
+            contagemOfereceRisco.nao++;
         }
 
-        document.getElementById('spinner').style.display = 'none';
+        // Contagem de "Apoio Segurança"
+        if (avaria.necessarioAtividadeAltura) {
+            contagemApoioSeguranca.sim++;
+        } else {
+            contagemApoioSeguranca.nao++;
+        }
+
+        // Contagem de "Tipo Inspeção"
+        let tipoInspecao = avaria.nomeChecklist;
+        if (contagemTipoInspecao[tipoInspecao]) {
+            contagemTipoInspecao[tipoInspecao]++;
+        } else {
+            contagemTipoInspecao[tipoInspecao] = 1; // Inicializa a contagem para o novo tipo
+        }
+    });
+
+    // Atualizar o conteúdo do Accordion "Status Atual" com as contagens
+    let conteudoStatus = `
+        <p>Total de Avarias: ${totalLinhas}</p>
+        <p>Pendente: ${contagemStatus.pendente}</p>
+        <p>Em Andamento: ${contagemStatus.emAndamento}</p>
+        <p>Finalizado: ${contagemStatus.finalizado}</p>
+        <p>Excluído: ${contagemStatus.excluido}</p>
+        <h5>Total por Item Checklist:</h5>
+    `;
+
+    // Adiciona as contagens de "Item Checklist"
+    for (let item in contagemItemChecklist) {
+        conteudoStatus += `<p>${item}: ${contagemItemChecklist[item]}</p>`;
     }
+
+    // Adiciona as contagens de "Casa Oração"
+    conteudoStatus += `<h5>Total por Casa Oração:</h5>`;
+    for (let casa in contagemCasaOracao) {
+        conteudoStatus += `<p>${casa}: ${contagemCasaOracao[casa]}</p>`;
+    }
+
+    // Adiciona as contagens de "Apoio Adm", "Oferece Risco", e "Apoio Segurança"
+    conteudoStatus += `
+        <h5>Total por Apoio Adm:</h5>
+        <p>Sim: ${contagemApoioAdm.sim}</p>
+        <p>Não: ${contagemApoioAdm.nao}</p>
+        
+        <h5>Total por Oferece Risco:</h5>
+        <p>Sim: ${contagemOfereceRisco.sim}</p>
+        <p>Não: ${contagemOfereceRisco.nao}</p>
+
+        <h5>Total por Apoio Segurança:</h5>
+        <p>Sim: ${contagemApoioSeguranca.sim}</p>
+        <p>Não: ${contagemApoioSeguranca.nao}</p>
+    `;
+
+    // Adiciona as contagens de "Tipo Inspeção"
+    conteudoStatus += `<h5>Total por Tipo Inspeção:</h5>`;
+    for (let tipo in contagemTipoInspecao) {
+        conteudoStatus += `<p>${tipo}: ${contagemTipoInspecao[tipo]}</p>`;
+    }
+
+    document.getElementById('totalRegistros').innerHTML = conteudoStatus;
+
+    let tabelaBody = document.querySelector('#tabela-relatorio tbody');
+    tabelaBody.innerHTML = '';
+
+    for (let avaria of avarias) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        let detalhes = await detalhesAvaria(avaria.codigo, token);
+        let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
+        let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
+        let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
+        let statusDescricao = statusAvarias[avaria.status];
+
+        let apoioAdm = avaria.apoioAdministracao ? 'Sim' : 'Não';
+        let ofereceRisco = avaria.ofereceRisco ? 'Sim' : 'Não';
+        let apoioSeguranca = avaria.necessarioAtividadeAltura ? 'Sim' : 'Não';
+
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${avaria.id}</td>
+            <td>${avaria.nomeCasaOracao}</td>
+            <td>${avaria.nome}</td>
+            <td>${detalhesDescricao}</td>
+            <td>${apoioAdm}</td>
+            <td>${ofereceRisco}</td>
+            <td>${apoioSeguranca}</td>
+            <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+            <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
+            <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
+            <td>${statusDescricao}</td>
+            <td>${avaria.nomeChecklist}</td>
+            <td>${avaria.nomeChecklistItem}</td>
+            <td>${qtdAnexos}</td>
+            <td><button class="btn btn-secondary" onclick="mostrarRespostas('${avaria.codigo}')">Ver Respostas</button></td>
+        `;
+        tabelaBody.appendChild(row);
+    }
+
+    document.getElementById('spinner').style.display = 'none';
+}
 
         
         async function mostrarRespostas(codigoAvaria) {
