@@ -377,7 +377,10 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
         // Contagem de "Item Checklist" dinâmica
         let contagemItemChecklist = {};
 
-        // Percorrer as avarias e contar os status e itens de checklist
+        // Contagem de "Casa Oração"
+        let contagemCasaOracao = {};
+
+        // Percorrer as avarias e contar os status, itens de checklist e casa de oração
         avarias.forEach(avaria => {
             // Contagem de status
             switch (avaria.status) {
@@ -408,6 +411,14 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
             } else {
                 contagemItemChecklist[itemChecklist] = 1; // Inicializa a contagem para o novo item
             }
+
+             // Contagem de "Casa Oração"
+            let casaOracao = avaria.nomeCasaOracao;
+            if (contagemCasaOracao[casaOracao]) {
+                contagemCasaOracao[casaOracao]++;
+            } else {
+                contagemCasaOracao[casaOracao] = 1; // Inicializa a contagem para a nova casa
+            }
         });
 
         // Atualizar o conteúdo do Accordion "Status Atual" com as contagens
@@ -423,6 +434,12 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
         // Adiciona as contagens de "Item Checklist"
         for (let item in contagemItemChecklist) {
             conteudoStatus += `<p>${item}: ${contagemItemChecklist[item]}</p>`;
+        }
+
+        // Adiciona as contagens de "Casa Oração"
+        conteudoStatus += `<h5>Total por Casa Oração:</h5>`;
+        for (let casa in contagemCasaOracao) {
+            conteudoStatus += `<p>${casa}: ${contagemCasaOracao[casa]}</p>`;
         }
 
         document.getElementById('totalRegistros').innerHTML = conteudoStatus;
