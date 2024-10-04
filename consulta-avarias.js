@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    
     carregarLocalidades(); // Carrega as localidades quando a página é carregada
 
     $('#statusSelect').select2({
@@ -137,7 +138,7 @@ async function gerarRelatorio() {
     //document.getElementById('periodoDashboard').innerHTML = ` Período: ${dataInicio ? dataInicio : 'Sem filtro'} a ${dataFim ? dataFim : 'Sem filtro'}`;
 
     if (!token) {
-        alert('Por favor, insira o Bearer Token.');
+        alert('Por favor, insira o ccbsiga-token-api.');
         return;
     }
 
