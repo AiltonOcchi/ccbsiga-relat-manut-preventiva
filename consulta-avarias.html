@@ -35,7 +35,7 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
 <body>
     
     <div class="container-fluid mt-4">
-        <h1>Relatório de Avarias - CCB SIGA</h1>        
+        <h1>Acompanhamento de Avarias - CCB SIGA</h1>        
         <div class="accordion" id="accordionRelatorios">
             
             <!-- Accordion 1 - Extração de Dados -->
@@ -143,24 +143,50 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
             <div class="accordion-item">
                 <h2 class="accordion-header" id="headingStatus">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStatus" aria-expanded="false" aria-controls="collapseStatus">
-                        Status Atual
+                        Dashboard
                     </button>
                 </h2>
                 <div id="collapseStatus" class="accordion-collapse collapse" aria-labelledby="headingStatus" data-bs-parent="#accordionRelatorios">
                     <div class="accordion-body">
-                        <!-- Conteúdo para "Status Atual" será adicionado aqui -->                        
+                        <!-- Conteúdo para "Status Atual" será adicionado aqui -->
                         <div class="row">
                             <div class="col-md-4 border border-left-0 pt-3">
                                 <h5>Totais</h5>
                                 <p id="totalRegistros" class="text-muted"></p>
                             </div>
-                            <div class="col-md-8 border border-left-0 pt-3">
-                                <h5>Gráficos</h5>
+                            <div class="col-md-8 border border-left-0">
+                                <h5 class="pt-3">Gráficos de Avarias <small id="periodoDashboard"></small></h5>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="card">
+                                            <h5 class="card-header">Avarias por Status</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoStatus"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="card">
+                                            <h5 class="card-header">Necessitam Apoio Administrativo</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoApoioAdm"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mt-3">
+                                        <div class="card">
+                                            <h5 class="card-header">Oferecem Risco</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoOfereceRisco"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> <!-- Fim da row -->
                             </div>
                         </div>
-                        
                     </div>
                 </div>
+                
             </div>
 
             <!-- Accordion 3 - Evolução -->
@@ -204,606 +230,10 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
-<script>
-
-    $(document).ready(function() {
-        carregarLocalidades(); // Carrega as localidades quando a página é carregada
-
-        $('#statusSelect').select2({
-            theme: 'bootstrap-5',
-            placeholder: "Selecione os status",
-            allowClear: true,
-            width: '100%'
-        });
-        
-        $('#tipoChecklistSelect').select2({
-            theme: 'bootstrap-5',
-            placeholder: "Selecione o(s) tipo(s) de checklist",
-            allowClear: true,
-            width: '100%'
-        });
-
-        $('#localidadeSelect').select2({
-            theme: 'bootstrap-5',
-            placeholder: "Selecione a localidade (Opcional)",
-            allowClear: true,
-            width: '100%'
-        });
-    });
-
-    const filtroJsonPadrao = {
-        "filtro": {
-            "codigoTipoChecklist": null,
-            "codigoEstabelecimento": null,
-            "dataIni": null,
-            "dataFim": null,
-            "status": [
-                { "codigo": 0, "nomeExibicao": "Pendente" },
-                { "codigo": 3, "nomeExibicao": "Em andamento" },
-                { "codigo": 2, "nomeExibicao": "Excluído" },
-                { "codigo": 1, "nomeExibicao": "Finalizado" }
-            ],
-            "pesquisaRapida": ""
-        },
-        "paginacao": {
-            "paginaAtual": 0,
-            "quantidadePorPagina": "100", //Limite de 100 registros por página (máximo SIGA)
-            "ordenarPor": null,
-            "ordenarDirecao": null
-        }
-    };
-
-    const statusAvarias = {
-        0: 'Pendente',
-        1: 'Finalizado',
-        2: 'Excluído',
-        3: 'Em andamento'
-    };
-
-    function onTokenInput() {
-        let token = document.getElementById('token').value;
-        if (token) {
-            carregarLocalidades();
-        }
-    }
-
-    async function detalhesAvaria(codigoAvaria, token) {
-        try {
-            let response = await fetch(`https://siga-api.congregacao.org.br/api/mnt/mnt002/avaria-selecionar-por-codigo?codigoAvaria=${codigoAvaria}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-            }
-            let data = await response.json();
-            return data;
-        } catch (error) {
-            console.error(`Erro ao buscar detalhes da avaria ${codigoAvaria}:`, error);
-            return null;
-        }
-    }
-
-    async function respostasAvaria(codigoAvaria, token) {
-        try {
-            let response = await fetch(`https://siga-api.congregacao.org.br/api/mnt/mnt002/selecionar/avarias-anotacoes?codigoChecklistItemAvaria=${codigoAvaria}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-            }
-            let data = await response.json();
-            return data;
-        } catch (error) {
-            console.error(`Erro ao buscar respostas da avaria ${codigoAvaria}:`, error);
-            return null;
-        }
-    }
-
-    async function listadeAvarias(token, pagina) {
-        try {
-            filtroJsonPadrao.paginacao.paginaAtual = pagina;
-
-            let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/dados/tabela', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify(filtroJsonPadrao)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-            }
-            
-            let data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Erro ao buscar dados de avarias:', error);
-            alert('Erro ao buscar dados de avarias: ' + error.message);
-            return null;
-        }
-    }
-    
-    async function gerarRelatorio() {
-        let token = document.getElementById('token').value;
-        let dataInicio = document.getElementById('dataIni').value;
-        let dataFim = document.getElementById('dataFim').value;
-        let statusSelecionados = $('#statusSelect').val();
-        let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
-        let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
-
-        if (!token) {
-            alert('Por favor, insira o Bearer Token.');
-            return;
-        }
-
-        document.getElementById('spinner').style.display = 'block';
-
-        filtroJsonPadrao.filtro.dataIni = dataInicio ? dataInicio : null;
-        filtroJsonPadrao.filtro.dataFim = dataFim ? dataFim : null;
-
-        if (statusSelecionados && statusSelecionados.length > 0) {
-            filtroJsonPadrao.filtro.status = statusSelecionados.map(codigo => {
-                return { "codigo": parseInt(codigo) };
-            });
-        }
-
-        if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
-            filtroJsonPadrao.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
-                return parseInt(codigo);
-            });
-        }
-
-        if (localidadeSelecionada) {
-            filtroJsonPadrao.filtro.codigoEstabelecimento = parseInt(localidadeSelecionada); // Apenas um localidade
-        } else {
-            filtroJsonPadrao.filtro.codigoEstabelecimento = null;
-        }
-
-        let primeiraPagina = await listadeAvarias(token, 1);
-        if (!primeiraPagina) {
-            document.getElementById('spinner').style.display = 'none';
-            return;
-        }
-
-        let totalLinhas = primeiraPagina.totalLinhas;
-        let quantidadePorPagina = primeiraPagina.quantitadePorPagina;
-        let totalPaginas = Math.ceil(totalLinhas / quantidadePorPagina);
-
-        let avarias = primeiraPagina.dados;
-
-        for (let pagina = 2; pagina <= totalPaginas; pagina++) {
-            let paginaDados = await listadeAvarias(token, pagina);
-            if (paginaDados && paginaDados.dados) {
-                avarias = avarias.concat(paginaDados.dados);
-            }
-        }
-
-        // Contagem de status
-        let contagemStatus = {
-            pendente: 0,
-            emAndamento: 0,
-            finalizado: 0,
-            excluido: 0
-        };
-
-        // Contagem de "Item Checklist" dinâmica
-        let contagemItemChecklist = {};
-
-        // Contagem de "Casa Oração"
-        let contagemCasaOracao = {};
-
-        // Contagem de "Apoio Adm", "Oferece Risco" e "Apoio Segurança"
-        let contagemApoioAdm = { sim: 0, nao: 0 };
-        let contagemOfereceRisco = { sim: 0, nao: 0 };
-        let contagemApoioSeguranca = { sim: 0, nao: 0 };
-
-        // Contagem de "Tipo Inspeção"
-        let contagemTipoInspecao = {};
-
-        // Percorrer as avarias e contar os status, itens de checklist, casas de oração, e os campos booleanos
-        avarias.forEach(avaria => {
-            // Contagem de status
-            switch (avaria.status) {
-                case 0:
-                    contagemStatus.pendente++;
-                    break;
-                case 3:
-                    contagemStatus.emAndamento++;
-                    break;
-                case 1:
-                    contagemStatus.finalizado++;
-                    break;
-                case 2:
-                    contagemStatus.excluido++;
-                    break;
-            }
-
-            // Contagem de "Item Checklist"
-            let itemChecklist = avaria.nomeChecklistItem;
-            if (itemChecklist.includes("Instalações Hidráulicas")) {
-                itemChecklist = "Instalações Hidráulicas"; // Simplifica o nome
-            }
-            if (contagemItemChecklist[itemChecklist]) {
-                contagemItemChecklist[itemChecklist]++;
-            } else {
-                contagemItemChecklist[itemChecklist] = 1; // Inicializa a contagem para o novo item
-            }
-
-            // Contagem de "Casa Oração"
-            let casaOracao = avaria.nomeCasaOracao;
-            if (contagemCasaOracao[casaOracao]) {
-                contagemCasaOracao[casaOracao]++;
-            } else {
-                contagemCasaOracao[casaOracao] = 1; // Inicializa a contagem para a nova casa
-            }
-
-            // Contagem de "Apoio Adm"
-            if (avaria.apoioAdministracao) {
-                contagemApoioAdm.sim++;
-            } else {
-                contagemApoioAdm.nao++;
-            }
-
-            // Contagem de "Oferece Risco"
-            if (avaria.ofereceRisco) {
-                contagemOfereceRisco.sim++;
-            } else {
-                contagemOfereceRisco.nao++;
-            }
-
-            // Contagem de "Apoio Segurança"
-            if (avaria.necessarioAtividadeAltura) {
-                contagemApoioSeguranca.sim++;
-            } else {
-                contagemApoioSeguranca.nao++;
-            }
-
-            // Contagem de "Tipo Inspeção"
-            let tipoInspecao = avaria.nomeChecklist;
-            if (contagemTipoInspecao[tipoInspecao]) {
-                contagemTipoInspecao[tipoInspecao]++;
-            } else {
-                contagemTipoInspecao[tipoInspecao] = 1; // Inicializa a contagem para o novo tipo
-            }
-        });
-
-
-        // Atualizar o conteúdo do Accordion "Status Atual" com as contagens formatadas em tabelas consistentes
-        let conteudoStatus = `
-            <table class="table table-bordered gerencial-table mt-3">
-                <tr>
-                    <td class="descricao-coluna"><strong>Total de Avarias</strong></td>
-                    <td class="valor-coluna">${totalLinhas}</td>
-                </tr>
-            </table>
-
-            <h5>Total por Status</h5>
-            <table class="table table-bordered gerencial-table">
-                <tr>
-                    <td class="descricao-coluna"><strong>Pendente</strong></td>
-                    <td class="valor-coluna">${contagemStatus.pendente}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Em Andamento</strong></td>
-                    <td class="valor-coluna">${contagemStatus.emAndamento}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Finalizado</strong></td>
-                    <td class="valor-coluna">${contagemStatus.finalizado}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Excluído</strong></td>
-                    <td class="valor-coluna">${contagemStatus.excluido}</td>
-                </tr>
-            </table>
-
-            <h5>Total por Item Checklist</h5>
-            <table class="table table-bordered gerencial-table">
-        `;
-
-        // Adiciona as contagens de "Item Checklist"
-        for (let item in contagemItemChecklist) {
-            conteudoStatus += `<tr><td class="descricao-coluna"><strong>${item}</strong></td><td class="valor-coluna">${contagemItemChecklist[item]}</td></tr>`;
-        }
-
-        conteudoStatus += `</table>`;
-
-        // Adiciona as contagens de "Casa Oração"
-        conteudoStatus += `
-            <h5>Total por Casa Oração</h5>
-            <table class="table table-bordered gerencial-table">
-        `;
-        for (let casa in contagemCasaOracao) {
-            conteudoStatus += `<tr><td class="descricao-coluna"><strong>${casa}</strong></td><td class="valor-coluna">${contagemCasaOracao[casa]}</td></tr>`;
-        }
-
-        conteudoStatus += `</table>`;
-
-        // Adiciona as contagens de "Apoio Adm", "Oferece Risco", e "Apoio Segurança"
-        conteudoStatus += `
-            <h5>Total por Apoio Adm</h5>
-            <table class="table table-bordered gerencial-table">
-                <tr>
-                    <td class="descricao-coluna"><strong>Sim</strong></td>
-                    <td class="valor-coluna">${contagemApoioAdm.sim}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Não</strong></td>
-                    <td class="valor-coluna">${contagemApoioAdm.nao}</td>
-                </tr>
-            </table>
-
-            <h5>Total por Oferece Risco</h5>
-            <table class="table table-bordered gerencial-table">
-                <tr>
-                    <td class="descricao-coluna"><strong>Sim</strong></td>
-                    <td class="valor-coluna">${contagemOfereceRisco.sim}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Não</strong></td>
-                    <td class="valor-coluna">${contagemOfereceRisco.nao}</td>
-                </tr>
-            </table>
-
-            <h5>Total por Apoio Segurança</h5>
-            <table class="table table-bordered gerencial-table">
-                <tr>
-                    <td class="descricao-coluna"><strong>Sim</strong></td>
-                    <td class="valor-coluna">${contagemApoioSeguranca.sim}</td>
-                </tr>
-                <tr>
-                    <td class="descricao-coluna"><strong>Não</strong></td>
-                    <td class="valor-coluna">${contagemApoioSeguranca.nao}</td>
-                </tr>
-            </table>
-        `;
-
-        // Adiciona as contagens de "Tipo Inspeção"
-        conteudoStatus += `
-            <h5>Total por Tipo Inspeção</h5>
-            <table class="table table-bordered gerencial-table">
-        `;
-        for (let tipo in contagemTipoInspecao) {
-            conteudoStatus += `<tr><td class="descricao-coluna"><strong>${tipo}</strong></td><td class="valor-coluna">${contagemTipoInspecao[tipo]}</td></tr>`;
-        }
-
-        conteudoStatus += `</table>`;
-
-
-        document.getElementById('totalRegistros').innerHTML = conteudoStatus;
-
-
-        let tabelaBody = document.querySelector('#tabela-relatorio tbody');
-        tabelaBody.innerHTML = '';
-
-        for (let avaria of avarias) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            let detalhes = await detalhesAvaria(avaria.codigo, token);
-            let detalhesDescricao = detalhes ? detalhes.descricao : 'N/A';
-            let detalhesDescricaoCorrecao = detalhes ? detalhes.descricaoCorrecao : 'N/A';
-            let qtdAnexos = detalhes.anexos ? detalhes.anexos.length : 0;
-            let statusDescricao = statusAvarias[avaria.status];
-
-            let apoioAdm = avaria.apoioAdministracao ? 'Sim' : 'Não';
-            let ofereceRisco = avaria.ofereceRisco ? 'Sim' : 'Não';
-            let apoioSeguranca = avaria.necessarioAtividadeAltura ? 'Sim' : 'Não';
-
-            let row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${avaria.id}</td>
-                <td>${avaria.nomeCasaOracao}</td>
-                <td>${avaria.nome}</td>
-                <td>${detalhesDescricao}</td>
-                <td>${apoioAdm}</td>
-                <td>${ofereceRisco}</td>
-                <td>${apoioSeguranca}</td>
-                <td>${new Date(avaria.dataAvaria).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                <td>${avaria.dataCorrecao ? new Date(avaria.dataCorrecao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</td>
-                <td>${detalhesDescricaoCorrecao || 'N/A'}</td>
-                <td>${statusDescricao}</td>
-                <td>${avaria.nomeChecklist}</td>
-                <td>${avaria.nomeChecklistItem}</td>
-                <td>${qtdAnexos}</td>
-                <td><button class="btn btn-secondary" onclick="mostrarRespostas('${avaria.codigo}')">Ver Respostas</button></td>
-            `;
-            tabelaBody.appendChild(row);
-        }
-
-        document.getElementById('spinner').style.display = 'none';
-    }
-
-    
-    async function mostrarRespostas(codigoAvaria) {
-        let token = document.getElementById('token').value;
-        let respostas = await respostasAvaria(codigoAvaria, token);
-        let respostasConteudo = document.getElementById('respostasConteudo');
-        respostasConteudo.innerHTML = ''; // Limpar conteúdo anterior
-
-        if (respostas && respostas.length > 0) {
-            respostas.forEach(resposta => {
-                let respostaHtml = `
-                    <div class="mb-3">
-                        <strong>Data e Hora:</strong> ${new Date(resposta.dataHora).toLocaleString()}<br>
-                        <strong>Descrição:</strong> ${resposta.descricao}<br>
-                        <strong>Usuário:</strong> ${resposta.usuario}<br>
-                        <strong>Possui Anexos:</strong> ${resposta.possuiAnexos ? 'Sim' : 'Não'}
-                    </div>
-                    <hr>
-                `;
-                respostasConteudo.innerHTML += respostaHtml;
-            });
-        } else {
-            respostasConteudo.innerHTML = '<p>Não há respostas disponíveis para esta avaria.</p>';
-        }
-
-        // Mostrar o modal
-        let respostasModal = new bootstrap.Modal(document.getElementById('respostasModal'));
-        respostasModal.show();
-    }
-
-    function copiarTabela() {
-        let tabela = document.getElementById('tabela-relatorio');
-        let range = document.createRange();
-        range.selectNode(tabela);
-        window.getSelection().removeAllRanges(); // Remover qualquer seleção anterior
-        window.getSelection().addRange(range); // Selecionar a tabela
-        document.execCommand('copy'); // Copiar para a área de transferência
-        window.getSelection().removeAllRanges(); // Remover a seleção para evitar que o conteúdo fique selecionado
-        alert('Tabela copiada para a área de transferência!');
-    }
-
-    function ordenarTabela(coluna) {
-        let tabela = document.getElementById("tabela-relatorio");
-        let linhas = Array.from(tabela.rows).slice(1); // Pega todas as linhas, exceto a primeira (cabeçalho)
-        let ordemAscendente = tabela.getAttribute("data-ordem") !== "asc"; // Alterna entre ascendente e descendente
-
-        // Não esta fazendo ordenação de datas e números corretamente
-        /*
-        linhas.sort((a, b) => {
-            let valorA = a.cells[coluna].innerText.trim();
-            let valorB = b.cells[coluna].innerText.trim();
-
-            if (!isNaN(valorA) && !isNaN(valorB)) {
-                // Se ambos valores são números, comparar como números
-                valorA = parseFloat(valorA);
-                valorB = parseFloat(valorB);
-            } else if (Date.parse(valorA) && Date.parse(valorB)) {
-                // Se ambos valores são datas, comparar como datas
-                valorA = new Date(valorA);
-                valorB = new Date(valorB);
-            }
-
-            return ordemAscendente ? valorA > valorB ? 1 : -1 : valorA < valorB ? 1 : -1;
-        });
-        */
-
-        linhas.sort((a, b) => {
-            let valorA = a.cells[coluna].innerText.trim();
-            let valorB = b.cells[coluna].innerText.trim();
-
-            // Verifica se os valores são datas no formato dd/MM/yyyy
-            if (coluna === 7 || coluna === 8) { // Colunas de data, ajuste conforme o índice das colunas de data
-                let partesA = valorA.split('/');
-                let partesB = valorB.split('/');
-                valorA = new Date(partesA[2], partesA[1] - 1, partesA[0]); // ano, mês, dia
-                valorB = new Date(partesB[2], partesB[1] - 1, partesB[0]);
-            } else if (!isNaN(valorA) && !isNaN(valorB)) {
-                // Se ambos valores são números, comparar como números
-                valorA = parseFloat(valorA);
-                valorB = parseFloat(valorB);
-            }
-
-            // Comparação de valores
-            if (valorA < valorB) {
-                return ordemAscendente ? -1 : 1;
-            } else if (valorA > valorB) {
-                return ordemAscendente ? 1 : -1;
-            } else {
-                return 0;
-            }
-        });
-
-        tabela.setAttribute("data-ordem", ordemAscendente ? "asc" : "desc");
-
-        // Remove as linhas existentes e adiciona as linhas ordenadas
-        let tbody = tabela.querySelector("tbody");
-        tbody.innerHTML = "";
-        linhas.forEach(linha => tbody.appendChild(linha));
-    }
-
-    function exportarTabelaParaExcel() {
-        let tabela = document.getElementById('tabela-relatorio');
-        let workbook = XLSX.utils.table_to_book(tabela, { sheet: "Relatório" });
-        XLSX.writeFile(workbook, 'relatorio_avarias.xlsx');
-    }
-
-    function filtrarTabela() {
-        let input = document.getElementById('campoBusca');
-        let filtro = input.value.toLowerCase();
-        let tabela = document.getElementById('tabela-relatorio');
-        let linhas = tabela.getElementsByTagName('tr');
-
-        for (let i = 1; i < linhas.length; i++) { // Começa em 1 para ignorar o cabeçalho
-            let colunas = linhas[i].getElementsByTagName('td');
-            let encontrado = false;
-            for (let j = 0; j < colunas.length; j++) {
-                if (colunas[j]) {
-                    let textoColuna = colunas[j].innerText || colunas[j].textContent;
-                    if (textoColuna.toLowerCase().indexOf(filtro) > -1) {
-                        encontrado = true;
-                        break;
-                    }
-                }
-            }
-            linhas[i].style.display = encontrado ? '' : 'none';
-        }
-    }
-
-    async function carregarLocalidades() {
-        let token = document.getElementById('token').value;
-        if (!token) {
-            return;
-        }
-
-        try {
-            let response = await fetch('https://siga-api.congregacao.org.br/api/mnt/mnt003/listar/estabelecimentos', {
-                method: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Erro ao buscar as localidades: ' + response.statusText);
-            }
-
-            let localidades = await response.json();
-
-            // Preencher o select com as opções
-            let selectElement = document.getElementById('localidadeSelect');
-            selectElement.innerHTML = ''; // Limpa as opções anteriores
-
-            // Adiciona uma opção vazia no início
-            let emptyOption = document.createElement('option');
-            emptyOption.value = '';
-            emptyOption.textContent = '';
-            selectElement.appendChild(emptyOption);
-
-            localidades.forEach(localidade => {
-                let option = document.createElement('option');
-                option.value = localidade.codigo;
-                option.textContent = localidade.nomeExibicao;
-                selectElement.appendChild(option);
-            });
-
-            // Inicializar o Select2 após o carregamento dos dados
-            $('#localidadeSelect').select2({
-                theme: 'bootstrap-5',
-                placeholder: "Selecione a localidade",
-                allowClear: true,
-                width: '100%'
-            });
-
-        } catch (error) {
-            console.error(error);
-            alert('Erro ao carregar as localidades: ' + error.message);
-        }
-    }
-
-</script>
+    <script src="consulta-avarias.js"></script>
 
 </body>
 </html>
