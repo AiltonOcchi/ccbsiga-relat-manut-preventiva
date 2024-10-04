@@ -134,7 +134,7 @@ async function gerarRelatorio() {
     let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
     let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
 
-    document.getElementById('periodoDashboard').innerHTML = ` Período: ${dataInicio ? dataInicio : 'Sem filtro'} a ${dataFim ? dataFim : 'Sem filtro'}`;
+    //document.getElementById('periodoDashboard').innerHTML = ` Período: ${dataInicio ? dataInicio : 'Sem filtro'} a ${dataFim ? dataFim : 'Sem filtro'}`;
 
     if (!token) {
         alert('Por favor, insira o Bearer Token.');
@@ -381,6 +381,10 @@ async function gerarRelatorio() {
     gerarGraficoStatus(contagemStatus);
     gerarGraficoApoioAdm(contagemApoioAdm);
     gerarGraficoOfereceRisco(contagemOfereceRisco);
+    gerarGraficoApoioSeguranca(contagemApoioSeguranca);
+    gerarGraficoTipoInspecao(contagemTipoInspecao);
+    gerarGraficoItemChecklist(contagemItemChecklist);
+    gerarGraficoCasaOracao(contagemCasaOracao);
 
 
     let tabelaBody = document.querySelector('#tabela-relatorio tbody');
@@ -723,6 +727,271 @@ function gerarGraficoOfereceRisco(contagemOfereceRisco) {
                     font: {
                         weight: 'bold',
                         size: 14
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+let graficoApoioSeguranca; // Variável para armazenar o gráfico de Apoio Segurança
+
+// Função para gerar o gráfico de Apoio Segurança
+function gerarGraficoApoioSeguranca(contagemApoioSeguranca) {
+    const ctx = document.getElementById('graficoApoioSeguranca').getContext('2d');
+
+    // Se o gráfico já existe, destruí-lo antes de criar um novo
+    if (graficoApoioSeguranca) {
+        graficoApoioSeguranca.destroy();
+    }
+
+    graficoApoioSeguranca = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Sim', 'Não'],
+            datasets: [{
+                data: [
+                    contagemApoioSeguranca.sim,
+                    contagemApoioSeguranca.nao
+                ],
+                backgroundColor: ['#ff6384','#4bc0c0'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                datalabels: {
+                    color: 'white',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+let graficoTipoInspecao; // Variável para armazenar o gráfico de Tipo de Inspeção
+
+// Função para gerar o gráfico de Total por Tipo de Inspeção
+function gerarGraficoTipoInspecao(contagemTipoInspecao) {
+    const ctx = document.getElementById('graficoTipoInspecao').getContext('2d');
+
+    // Se o gráfico já existe, destruí-lo antes de criar um novo
+    if (graficoTipoInspecao) {
+        graficoTipoInspecao.destroy();
+    }
+
+    const labels = Object.keys(contagemTipoInspecao);
+    const valores = Object.values(contagemTipoInspecao);
+
+    graficoTipoInspecao = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels, // Tipos de inspeção
+            datasets: [{
+                label: 'Quantidade',
+                data: valores, // Contagens correspondentes
+                backgroundColor: ['#ffcd56', '#36a2eb', '#4bc0c0', '#ff6384', '#9966ff', '#ff9f40'],
+                borderColor: 'transparent', // Remover borda
+                borderWidth: 0 // Bordas removidas
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: false // Remover o grid no eixo Y
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false // Remover o grid no eixo X
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                datalabels: {
+                    color: 'black',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+
+let graficoItemChecklist; // Variável para armazenar o gráfico de Item Checklist
+
+// Função para gerar o gráfico de Total por Item Checklist
+function gerarGraficoItemChecklist(contagemItemChecklist) {
+    const ctx = document.getElementById('graficoItemChecklist').getContext('2d');
+
+    // Se o gráfico já existe, destruí-lo antes de criar um novo
+    if (graficoItemChecklist) {
+        graficoItemChecklist.destroy();
+    }
+
+    const labels = Object.keys(contagemItemChecklist);
+    const valores = Object.values(contagemItemChecklist);
+
+    // Paleta de cores ampliada
+    const paletaCores = [
+        '#ffcd56', '#36a2eb', '#4bc0c0', '#ff6384', '#9966ff', '#ff9f40',
+        '#c9cbcf', '#00a65a', '#d2d6de', '#f39c12', '#3c8dbc', '#00c0ef',
+        '#39cccc', '#001f3f', '#85144b', '#f012be', '#b10dc9', '#ff851b',
+        '#2ecc40', '#e74c3c', '#9b59b6', '#3498db', '#e67e22', '#16a085'
+    ];
+
+    // Expandir o número de cores dinamicamente se necessário
+    const backgroundColors = labels.map((_, index) => paletaCores[index % paletaCores.length]);
+
+    graficoItemChecklist = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels, // Itens de checklist
+            datasets: [{
+                label: 'Quantidade',
+                data: valores, // Contagens correspondentes
+                backgroundColor: backgroundColors,
+                borderColor: 'transparent', // Remover borda
+                borderWidth: 0 // Bordas removidas
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: false // Remover o grid no eixo Y
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false // Remover o grid no eixo X
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                datalabels: {
+                    color: 'black',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+
+let graficoCasaOracao; // Variável para armazenar o gráfico de Casa Oração
+
+// Função para gerar o gráfico de Total por Casa Oração
+function gerarGraficoCasaOracao(contagemCasaOracao) {
+    const ctx = document.getElementById('graficoCasaOracao').getContext('2d');
+
+    // Se o gráfico já existe, destruí-lo antes de criar um novo
+    if (graficoCasaOracao) {
+        graficoCasaOracao.destroy();
+    }
+
+    const labels = Object.keys(contagemCasaOracao);
+    const valores = Object.values(contagemCasaOracao);
+
+    // Paleta de cores ampliada (60 cores diferentes)
+    const paletaCores = [
+        '#ffcd56', '#36a2eb', '#4bc0c0', '#ff6384', '#9966ff', '#ff9f40',
+        '#c9cbcf', '#00a65a', '#d2d6de', '#f39c12', '#3c8dbc', '#00c0ef',
+        '#39cccc', '#001f3f', '#85144b', '#f012be', '#b10dc9', '#ff851b',
+        '#2ecc40', '#e74c3c', '#9b59b6', '#3498db', '#e67e22', '#16a085',
+        '#1abc9c', '#9b59b6', '#f1c40f', '#e74c3c', '#2ecc71', '#ecf0f1',
+        '#95a5a6', '#34495e', '#7f8c8d', '#27ae60', '#e67e22', '#d35400',
+        '#2980b9', '#8e44ad', '#c0392b', '#bdc3c7', '#3498db', '#16a085',
+        '#27ae60', '#f39c12', '#8e44ad', '#2980b9', '#d35400', '#7f8c8d',
+        '#34495e', '#e74c3c', '#c0392b', '#bdc3c7', '#95a5a6', '#f1c40f'
+    ];
+
+    const backgroundColors = labels.map((_, index) => paletaCores[index % paletaCores.length]);
+
+    graficoCasaOracao = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels, // Casas de Oração
+            datasets: [{
+                label: 'Quantidade',
+                data: valores, // Contagens correspondentes
+                backgroundColor: backgroundColors,
+                borderColor: 'transparent', // Remover borda
+                borderWidth: 0 // Bordas removidas
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: false // Remover o grid no eixo Y
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false // Remover o grid no eixo X
+                    },
+                    ticks: {
+                        autoSkip: false, // Mostrar todos os rótulos no eixo X
+                        maxRotation: 90, // Rotacionar os rótulos se necessário
+                        minRotation: 45
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                datalabels: {
+                    color: 'black',
+                    font: {
+                        weight: 'bold',
+                        size: 12
                     },
                     formatter: (value) => {
                         return value;

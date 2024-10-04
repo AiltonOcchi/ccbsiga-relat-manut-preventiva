@@ -148,14 +148,13 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
                 </h2>
                 <div id="collapseStatus" class="accordion-collapse collapse" aria-labelledby="headingStatus" data-bs-parent="#accordionRelatorios">
                     <div class="accordion-body">
-                        <!-- Conteúdo para "Status Atual" será adicionado aqui -->
                         <div class="row">
                             <div class="col-md-4 border border-left-0 pt-3">
                                 <h5>Totais</h5>
                                 <p id="totalRegistros" class="text-muted"></p>
                             </div>
                             <div class="col-md-8 border border-left-0">
-                                <h5 class="pt-3">Gráficos de Avarias <small id="periodoDashboard"></small></h5>
+                                <h5 class="pt-3 mb-3">Gráficos</h5>
                                 <div class="row">
                                     <div class="col-sm-6">
                                         <div class="card">
@@ -167,25 +166,59 @@ Agradecimentos: Agradeço a Deus por me dar força e sabedoria para desenvolver 
                                     </div>
                                     <div class="col-sm-6">
                                         <div class="card">
-                                            <h5 class="card-header">Necessitam Apoio Administrativo</h5>
+                                            <h5 class="card-header">Total por Tipo de Inspeção</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoTipoInspecao"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4 mt-3">
+                                        <div class="card">
+                                            <h5 class="card-header">Apoio Administrativo</h5>
                                             <div class="card-body">
                                                 <canvas id="graficoApoioAdm"></canvas>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-sm-6 mt-3">
+                                    <div class="col-sm-4 mt-3">
                                         <div class="card">
-                                            <h5 class="card-header">Oferecem Risco</h5>
+                                            <h5 class="card-header">Oferece Risco</h5>
                                             <div class="card-body">
                                                 <canvas id="graficoOfereceRisco"></canvas>
                                             </div>
                                         </div>
                                     </div>
-                                </div> <!-- Fim da row -->
+                                    <div class="col-sm-4 mt-3">
+                                        <div class="card">
+                                            <h5 class="card-header">Apoio Segurança</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoApoioSeguranca"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12 mt-3">
+                                        <div class="card">
+                                            <h5 class="card-header">Total por Item do Checklist</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoItemChecklist"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12 mt-3">
+                                        <div class="card">
+                                            <h5 class="card-header">Total por Casa Oração</h5>
+                                            <div class="card-body">
+                                                <canvas id="graficoCasaOracao"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                
                 
             </div>
 
