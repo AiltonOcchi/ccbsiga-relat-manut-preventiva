@@ -862,12 +862,15 @@ function gerarGraficoItemChecklist(contagemItemChecklist) {
     const valores = Object.values(contagemItemChecklist);
 
     // Paleta de cores ampliada
+    /*
     const paletaCores = [
         '#ffcd56', '#36a2eb', '#4bc0c0', '#ff6384', '#9966ff', '#ff9f40',
         '#c9cbcf', '#00a65a', '#d2d6de', '#f39c12', '#3c8dbc', '#00c0ef',
         '#39cccc', '#001f3f', '#85144b', '#f012be', '#b10dc9', '#ff851b',
         '#2ecc40', '#e74c3c', '#9b59b6', '#3498db', '#e67e22', '#16a085'
     ];
+    */
+    const paletaCores = ['#36a2eb']
 
     // Expandir o número de cores dinamicamente se necessário
     const backgroundColors = labels.map((_, index) => paletaCores[index % paletaCores.length]);
@@ -936,6 +939,7 @@ function gerarGraficoCasaOracao(contagemCasaOracao) {
     const valores = Object.values(contagemCasaOracao);
 
     // Paleta de cores ampliada (60 cores diferentes)
+    /*
     const paletaCores = [
         '#ffcd56', '#36a2eb', '#4bc0c0', '#ff6384', '#9966ff', '#ff9f40',
         '#c9cbcf', '#00a65a', '#d2d6de', '#f39c12', '#3c8dbc', '#00c0ef',
@@ -947,6 +951,8 @@ function gerarGraficoCasaOracao(contagemCasaOracao) {
         '#27ae60', '#f39c12', '#8e44ad', '#2980b9', '#d35400', '#7f8c8d',
         '#34495e', '#e74c3c', '#c0392b', '#bdc3c7', '#95a5a6', '#f1c40f'
     ];
+    */
+    const paletaCores = ['#00c0ef'];
 
     const backgroundColors = labels.map((_, index) => paletaCores[index % paletaCores.length]);
 
