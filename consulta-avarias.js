@@ -132,7 +132,7 @@ async function gerarRelatorio() {
     let dataInicio = document.getElementById('dataIni').value;
     let dataFim = document.getElementById('dataFim').value;
     let statusSelecionados = $('#statusSelect').val();
-    let tipoChecklistSelecionados = $('#tipoChecklistSelect').val(); 
+    let tipoChecklistSelecionados = document.getElementById('tipoChecklistSelect').value;
     let localidadeSelecionada = $('#localidadeSelect').val(); // Pega o valor selecionado para localidade
 
     //document.getElementById('periodoDashboard').innerHTML = ` Período: ${dataInicio ? dataInicio : 'Sem filtro'} a ${dataFim ? dataFim : 'Sem filtro'}`;
@@ -153,10 +153,10 @@ async function gerarRelatorio() {
         });
     }
 
-    if (tipoChecklistSelecionados && tipoChecklistSelecionados.length > 0) {
-        filtroJsonPadrao.filtro.codigoTipoChecklist = tipoChecklistSelecionados.map(codigo => {
-            return parseInt(codigo);
-        });
+    if (tipoChecklistSelecionados) {
+        filtroJsonPadrao.filtro.codigoTipoChecklist = parseInt(tipoChecklistSelecionados); // Apenas um tipo de Checklist
+    } else {
+        filtroJsonPadrao.filtro.codigoEstabelecimento = null;
     }
 
     if (localidadeSelecionada) {
